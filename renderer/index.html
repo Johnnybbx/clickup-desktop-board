@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'; img-src 'self' data:;"
+    />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ClickUp Desktop Board</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <header class="titlebar">
+      <div class="brand">
+        <span class="brand-mark"></span>
+        <div>
+          <h1>ClickUp Board</h1>
+          <p id="subtitle">指派給我的任務</p>
+        </div>
+      </div>
+      <div class="window-actions">
+        <button id="pinBtn" class="icon-btn active" title="置頂" aria-label="切換置頂">📌</button>
+        <button id="refreshBtn" class="icon-btn" title="重新整理" aria-label="重新整理">↻</button>
+        <button id="minimizeBtn" class="icon-btn" title="最小化" aria-label="最小化">—</button>
+        <button id="closeBtn" class="icon-btn" title="隱藏到背景" aria-label="關閉">×</button>
+      </div>
+    </header>
+
+    <section class="toolbar">
+      <div class="meta">
+        <span id="countLabel">載入中…</span>
+        <span id="updatedLabel"></span>
+      </div>
+      <input
+        id="searchInput"
+        type="search"
+        placeholder="搜尋任務、清單、狀態…"
+        autocomplete="off"
+      />
+    </section>
+
+    <main id="taskList" class="task-list" aria-live="polite"></main>
+    <div id="emptyState" class="empty hidden">目前沒有指派給你的未完成任務。</div>
+    <div id="errorState" class="error hidden"></div>
+
+    <script src="./renderer.js"></script>
+  </body>
+</html>

@@ -1,0 +1,18 @@
+{
+  "name": "clickup-desktop-board",
+  "version": "1.0.0",
+  "description": "Always-on-top Windows desktop board for ClickUp tasks assigned to you",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron .",
+    "icon": "python scripts/generate-icon.py",
+    "shortcut": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/install-shortcut.ps1",
+    "setup": "powershell -NoProfile -ExecutionPolicy Bypass -File setup.ps1"
+  },
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^37.2.0"
+  }
+}
