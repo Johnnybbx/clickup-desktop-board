@@ -1,4 +1,4 @@
-const ORDER_KEY = "clickup-desktop-board.task-order";
+const LEGACY_ORDER_KEY = "clickup-desktop-board.task-order";
 
 const state = {
   tasks: [],
@@ -23,37 +23,32 @@ const els = {
 };
 
 let dragMoved = false;
+let legacyMigrated = false;
 
-function loadOrder() {
+function readLegacyOrder() {
   try {
-    const raw = localStorage.getItem(ORDER_KEY);
+    const raw = localStorage.getItem(LEGACY_ORDER_KEY);
     const parsed = raw ? JSON.parse(raw) : [];
-    return Array.isArray(parsed) ? parsed.filter((id) => typeof id === "string") : [];
+    return Array.isArray(parsed)
+      ? parsed.filter((id) => typeof id === "string")
+      : [];
   } catch {
     return [];
   }
 }
 
-function saveOrder(ids) {
-  localStorage.setItem(ORDER_KEY, JSON.stringify(ids));
-}
+async function migrateLegacyOrderIfNeeded() {
+  if (legacyMigrated) return;
+  legacyMigrated = true;
 
-function applyCustomOrder(tasks, orderIds) {
-  const map = new Map(tasks.map((task) => [task.id, task]));
-  const ordered = [];
+  const legacy = readLegacyOrder();
+  if (!legacy.length) return;
 
-  for (const id of orderIds) {
-    const task = map.get(id);
-    if (!task) continue;
-    ordered.push(task);
-    map.delete(id);
+  const existing = await window.desktopBoard.getTaskOrder();
+  if (!existing.length) {
+    await window.desktopBoard.saveTaskOrder(legacy);
   }
-
-  for (const task of map.values()) {
-    ordered.push(task);
-  }
-
-  return ordered;
+  localStorage.removeItem(LEGACY_ORDER_KEY);
 }
 
 function formatDue(dueDate) {
@@ -106,7 +101,7 @@ function filteredTasks() {
   });
 }
 
-function reorderTasks(fromId, toId) {
+async function reorderTasks(fromId, toId) {
   if (!fromId || !toId || fromId === toId) return;
   const fromIndex = state.tasks.findIndex((task) => task.id === fromId);
   const toIndex = state.tasks.findIndex((task) => task.id === toId);
@@ -116,8 +111,8 @@ function reorderTasks(fromId, toId) {
   const [moved] = next.splice(fromIndex, 1);
   next.splice(toIndex, 0, moved);
   state.tasks = next;
-  saveOrder(next.map((task) => task.id));
   render();
+  await window.desktopBoard.saveTaskOrder(next.map((task) => task.id));
 }
 
 function clearDragOver() {
@@ -285,13 +280,15 @@ window.desktopBoard.onTasksUpdated((payload) => {
     return;
   }
 
-  const incoming = payload.tasks || [];
-  const ordered = applyCustomOrder(incoming, loadOrder());
-  state.tasks = ordered;
-  saveOrder(ordered.map((task) => task.id));
+  state.tasks = payload.tasks || [];
   state.userName = payload.user?.username || "";
   state.fetchedAt = payload.fetchedAt || Date.now();
   render();
 });
 
-syncPinButton();
+migrateLegacyOrderIfNeeded()
+  .catch(() => {})
+  .finally(async () => {
+    await syncPinButton();
+    await window.desktopBoard.refreshTasks();
+  });

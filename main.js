@@ -1,6 +1,11 @@
 const { app, BrowserWindow, ipcMain, shell, Tray, Menu, nativeImage } = require("electron");
 const path = require("path");
 const { fetchAssignedTasks } = require("./clickup");
+const {
+  loadTaskOrder,
+  saveTaskOrder,
+  applyCustomOrder,
+} = require("./order-store");
 
 const APP_ID = "com.clickup.desktopboard";
 const ICON_PATH = path.join(__dirname, "assets", "icon.ico");
@@ -89,8 +94,15 @@ function createTray() {
 async function refreshTasks() {
   try {
     const data = await fetchAssignedTasks();
+    const orderedTasks = applyCustomOrder(data.tasks || [], loadTaskOrder());
+    // Keep known custom order; append newly assigned tasks at the end.
+    saveTaskOrder(orderedTasks.map((task) => task.id));
     if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.webContents.send("tasks-updated", { ok: true, ...data });
+      mainWindow.webContents.send("tasks-updated", {
+        ok: true,
+        ...data,
+        tasks: orderedTasks,
+      });
     }
   } catch (error) {
     if (mainWindow && !mainWindow.isDestroyed()) {
@@ -110,7 +122,7 @@ function startAutoRefresh() {
 app.whenReady().then(() => {
   createWindow();
   createTray();
-  refreshTasks();
+  // First fetch is triggered by the renderer after legacy order migration.
   startAutoRefresh();
 
   app.on("activate", () => {
@@ -146,4 +158,10 @@ ipcMain.handle("open-external", async (_event, url) => {
   if (typeof url === "string" && url.startsWith("https://")) {
     await shell.openExternal(url);
   }
+});
+
+ipcMain.handle("get-task-order", async () => loadTaskOrder());
+
+ipcMain.handle("save-task-order", async (_event, ids) => {
+  return saveTaskOrder(ids);
 });
